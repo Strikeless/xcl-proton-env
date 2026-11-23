@@ -1,5 +1,9 @@
 # xcl-proton-env
 
+> [!WARNING]
+> This project was 100% vibe-coded within an hour, with a human **barely** in the loop.
+> Do not expect a high-quality product.
+
 Scripts to build and run [XCL](https://github.com/ivall/xcl) (an Xbox Series X|S → Windows
 compatibility layer) on Linux with Proton, optionally inside a bubblewrap sandbox.
 
@@ -84,3 +88,19 @@ shader caches). Keep that in mind if you mix the two.
   See the issue above.
 - **Test title on repeated runs:** its "delete hides the file" check fails on every run
   after the first, because XCL's overlay remembers the earlier run's deletion.
+
+## License
+
+The scripts and documentation in this repository are released into the public domain under
+the [Unlicense](LICENSE).
+
+That covers only this repository's own files. The software the scripts use or download keeps
+its own license:
+
+- XCL (the `xcl` submodule, not included in this repository): GPL-2.0-only.
+- Proton, DXVK and vkd3d-proton: provided by your Proton installation.
+- Microsoft's DirectX Shader Compiler, and the MSVC CRT / Windows SDK fetched by cargo-xwin:
+  Microsoft's terms.
+
+An environment directory made by `prefix-init.sh` (`pfx/`) contains files covered by those
+licenses. It is not part of this project and is not covered by the Unlicense.
