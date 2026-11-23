@@ -116,7 +116,10 @@ msg "Creating / updating the wineprefix with Proton (DXVK, vkd3d-proton, ...)"
 proton_env "$dir"
 # Any verb but "runinprefix" makes Proton (re)build the prefix; "getcompatpath" does
 # nothing else of note. Proton logs to stderr.
-proton getcompatpath "$dir" >/dev/null || die "Proton failed to set up the prefix"
+if ! proton getcompatpath "$dir" >/dev/null; then
+    wineserver_wait "$dir"
+    die "Proton failed to set up the prefix (see its output above)"
+fi
 wineserver_wait "$dir"
 [[ -f $(xclenv_pfx "$dir")/system.reg ]] || die "Proton did not create a prefix in $(xclenv_pfx "$dir")"
 write_conf "$dir" "$PROTON_DIR"

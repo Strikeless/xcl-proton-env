@@ -218,3 +218,44 @@ Simplest honest option: bash shebang and bash-only, which works from a zsh login
    counts. Expect a vkd3d-proton vtable failure unless a relaxed vkd3d-proton is supplied.
 3. Sandbox checks inside bwrap: no network (`curl` fails / no interfaces besides lo), `/home`
    absent, writing to `/usr` fails, the game dir is read-only.
+
+## 6. Implementation findings (2026-11-23) – what the scripts actually do and why
+
+- **cargo-xwin + libudis86-sys:** its build.rs passes the gcc flag `-includestring.h`,
+  which clang-cl ignores, so the build fails on an implicit `memset`. cargo-xwin
+  *overwrites* `CFLAGS_x86_64_pc_windows_msvc`, so the fix is
+  `CC_x86_64-pc-windows-msvc=clang-cl /FIstring.h`. cc-rs ranks the hyphenated variable
+  above the underscore one that cargo-xwin sets. A full release build takes about 30 s.
+- **Proton verbs:**
+  - Any verb except `runinprefix` (re)builds the prefix, so `getcompatpath <path>` is used
+    for "create / update the prefix and translate a path".
+  - `run` goes through `steam.exe`, except on GE-Proton with `UMU_ID` set; avoid it.
+  - XCL runs with `runinprefix`. That verb does **not** set Proton's DXVK / vkd3d-proton
+    DLL overrides (they are set inside `setup_prefix`), so without our own
+    `WINEDLLOVERRIDES=dxgi,d3d9,d3d10core,d3d11,d3d12,d3d12core=n`, Wine's builtin
+    vkd3d is used ("Feature level 0xc000 is not supported", WARP fallback).
+  - Env vars set: `SteamAppId=0` / `SteamGameId=0` / `STEAM_COMPAT_APP_ID=0`. GE's
+    protonfixes needs a game id, otherwise it does a regex on the compat path.
+    `STEAM_COMPAT_CLIENT_INSTALL_PATH` points at an empty `<dir>/steam`.
+  - Proton records the Proton, compat-data and Steam paths in `<dir>/config_info`. The
+    sandbox mounts everything at its real path so the prefix is not rebuilt on every run.
+- **vkd3d-proton shader cache** defaults to the cwd, which is the game folder. XCL's VFS
+  then redirects the write into its overlay. `VKD3D_SHADER_CACHE_PATH` points it to
+  `<dir>/cache`.
+- **GE-Proton11-12** on this machine fails to create a prefix: "unimplemented function
+  win32u.NtGdiDdDDIQueryFSEBlock / ole32.CoInitialize". This is a Proton build or
+  installation problem. GE-Proton11-3 and 10-34 work, and testing used GE-Proton11-3.
+- **GE-Proton protonfixes** fetches an upscaler manifest from the network (FSR4 is on by
+  default). In the sandbox this fails with a harmless `CRIT ... name resolution` line.
+- The user has the lsfg-vk implicit Vulkan layer. It prints "Invalid enum name: none"
+  errors, which are harmless; `DISABLE_LSFGVK=1` silences it.
+- **Test title results (GE-Proton11-3, RX 6700 XT):** 36 PASS / 14 FAIL on the first run.
+  The fails are D3D12.X "Invalid parameter" (vkd3d vtable issue, #175), the XAudio2 XMA2
+  check, xmem working-set statistics, and the window not being cloaked. All are XCL / Wine
+  side. Later runs fail one more check (the overlay delete check) because XCL's overlay
+  keeps the earlier deletion.
+- **Sandbox:** `--overlay-src DIR --tmp-overlay DIR` works for the environment dir on ext4
+  and tmpfs. The rw binds of the XCL data dir and the cache dir go on top of it and
+  persist. `--remount-ro /` comes last. Verified from inside: only `lo`, no `/home`
+  contents, `/usr`, the game and `/etc` read-only, prefix writes discarded, nested
+  userns refused, X11 and PipeWire-pulse reachable.

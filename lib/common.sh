@@ -89,7 +89,15 @@ find_proton_candidates() {
                 is_proton_dir "$d" && realpath -- "$d"
             done
         done
-    } 2>/dev/null | awk '!seen[$0]++'
+    } 2>/dev/null | awk '!seen[$0]++' | {
+        # GE-Proton / Proton-CachyOS first, newest version first.
+        local d b r
+        while IFS= read -r d; do
+            b=${d##*/}
+            case $b in *GE-Proton*|*[Cc]achy*) r=0 ;; *) r=1 ;; esac
+            printf '%s\t%s\t%s\n' "$r" "$b" "$d"
+        done | sort -t $'\t' -k1,1n -k2,2Vr | cut -f3-
+    }
 }
 
 proton_label() {
