@@ -17,7 +17,7 @@ XCL itself does not officially support Wine yet. See "Known problems" below.
   (clang/lld).
 - `bwrap` (bubblewrap ≥ 0.10), `python3`, `rsync`, `curl`, `unzip`.
 - A Vulkan GPU driver with mesh shaders (for example Mesa RADV on RDNA2+, or NVIDIA).
-- The XCL submodule: `git submodule update --init`.
+- The XCL submodule: `git submodule update --init --remote --recursive`. Note that the version tracked by the submodule is likely outdated, which is why you should use `--remote`.
 
 ## Usage
 
